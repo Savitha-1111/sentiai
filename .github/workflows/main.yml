@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -38,18 +41,19 @@ jobs:
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/flask-sentiment-app:${{ env.IMAGE_TAG }}
 
   deploy:
-    runs-on: ubuntu-latest
     needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Login to Azure CLI
+      - name: Az CLI login
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Container Apps
         run: |
@@ -62,3 +66,8 @@ jobs:
             --memory 0.5 \
             --ingress 'external' \
             --target-port 5000
+
+      - name: Get Application URL
+        run: |
+          APP_URL=$(az containerapp show --name myFlaskApp --resource-group myResourceGroup --query properties.configuration.ingress.fqdn -o tsv)
+          echo "Application URL: ${APP_URL}"
