@@ -2,19 +2,21 @@ name: cicd-workflow to create docker image and upload into Dockerhub
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
     
     - name: Set up Python 3.9
       uses: actions/setup-python@v4
       with:
-        python-version: 3.9
+        python-version: '3.9'
     
     - name: Install dependencies
       run: |
@@ -35,7 +37,7 @@ jobs:
         IMAGE_TAG: ${{ github.sha }}
       run: |
         docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/myflaskapp:${IMAGE_TAG} .
-    
+
   push_to_dockerhub:
     needs: build
     runs-on: ubuntu-latest
