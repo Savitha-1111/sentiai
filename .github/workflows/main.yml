@@ -1,11 +1,11 @@
-name: cicd-workflow 
+name: cicd-workflow
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,9 +28,41 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build and push Docker image
+    - name: Build Docker image
       env:
         IMAGE_TAG: ${{ github.sha }}
       run: |
         docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/flask-sentiment-app:${IMAGE_TAG} .
+        echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+
+    - name: Push Docker image
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/flask-sentiment-app:${IMAGE_TAG}
+
+  deploy-azure:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: 'Az CLI login'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: 'Deploy to Azure Container Apps'
+      run: |
+        az containerapp create \
+          --name my-container-app \
+          --resource-group my-container-apps \
+          --environment my-container-apps \
+          --image ${{ secrets.DOCKERHUB_USERNAME }}/flask-sentiment-app:${IMAGE_TAG} \
+          --cpu 0.25 \
+          --memory 0.5 \
+          --ingress external \
+          --target-port 5000
+
+    - name: 'Get Application URL'
+      run: |
+        APP_URL=$(az containerapp show --name my-container-app --resource-group my-container-apps --query properties.configuration.ingress.fqdn -o tsv)
+        echo "Application URL: ${APP_URL}"
