@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      image-tag: ${{ steps.build-image.outputs.image-tag }}
+      image-tag: latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -32,12 +32,9 @@ jobs:
 
       - name: Build and push Docker image
         id: build-image
-        env:
-          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${IMAGE_TAG} .
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${IMAGE_TAG}
-          echo "image-tag=${IMAGE_TAG}" >> $GITHUB_ENV
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -53,7 +50,7 @@ jobs:
           az containerapp create \
             --name my-flask-app \
             --resource-group myResourceGroup \
-            --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }} \
+            --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:latest \
             --cpu 0.25 \
             --memory 0.5 \
             --target-port 5000 \
@@ -67,5 +64,5 @@ jobs:
     steps:
       - name: Get Application URL
         run: |
-          APP_URL=$(az containerapp show --name myFlaskApp --resource-group myResourceGroup --query properties.configuration.ingress.fqdn -o tsv)
+          APP_URL=$(az containerapp show --name my-flask-app --resource-group myResourceGroup --query properties.configuration.ingress.fqdn -o tsv)
           echo "Application URL: ${APP_URL}"
