@@ -51,7 +51,7 @@ jobs:
       - name: Create or update Azure Container App
         run: |
           az containerapp create \
-            --name myFlaskApp \
+            --name my-flask-app \
             --resource-group myResourceGroup \
             --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }} \
             --cpu 0.25 \
