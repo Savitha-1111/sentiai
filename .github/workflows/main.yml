@@ -2,7 +2,8 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
 
 jobs:
   build:
@@ -46,26 +47,20 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-  
-      - name: Create or update Azure Container App
-        shell: bash
-        run: |
-          if ! az containerapp show --name myFlaskApp --resource-group myResourceGroup; then
-            az containerapp create \
-              --name myFlaskApp \
-              --resource-group myResourceGroup \
-              --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }} \
-              --cpu 0.25 \
-              --memory 0.5 \
-              --ingress external \
-              --target-port 5000 \
-              --environment myContainerAppEnv
-          else
-            az containerapp update \
-              --name myFlaskApp \
-              --resource-group myResourceGroup \
-              --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }}
 
+      - name: Create or update Azure Container App
+        run: |
+          az containerapp create \
+            --name myFlaskApp \
+            --resource-group myResourceGroup \
+            --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }} \
+            --cpu 0.25 \
+            --memory 0.5 \
+            --ingress external \
+            --target-port 5000 \
+            --environment myContainerAppEnv \
+            --location centralindia \
+            --query properties.configuration.ingress.fqdn
 
   get-url:
     runs-on: ubuntu-latest
