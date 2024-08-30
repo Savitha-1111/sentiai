@@ -56,10 +56,9 @@ jobs:
             --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }} \
             --cpu 0.25 \
             --memory 0.5 \
-            --ingress external \
             --target-port 5000 \
             --environment myContainerAppEnv \
-            --location centralindia \
+            --ingress external \
             --query properties.configuration.ingress.fqdn
 
   get-url:
