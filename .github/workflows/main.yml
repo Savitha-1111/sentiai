@@ -46,8 +46,9 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
+  
       - name: Create or update Azure Container App
+        shell: bash
         run: |
           if ! az containerapp show --name myFlaskApp --resource-group myResourceGroup; then
             az containerapp create \
@@ -58,12 +59,13 @@ jobs:
               --memory 0.5 \
               --ingress external \
               --target-port 5000 \
-              --environment <your-environment-name>  # Replace with your Container App environment
+              --environment myContainerAppEnv
           else
             az containerapp update \
               --name myFlaskApp \
               --resource-group myResourceGroup \
               --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }}
+
 
   get-url:
     runs-on: ubuntu-latest
