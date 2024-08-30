@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -10,65 +10,66 @@ jobs:
     outputs:
       image-tag: ${{ steps.build-image.outputs.image-tag }}
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.9
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build and push Docker image
-      id: build-image
-      env:
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${IMAGE_TAG} .
-        docker push ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${IMAGE_TAG}
-        echo "image-tag=${IMAGE_TAG}" >> $GITHUB_ENV
+      - name: Build and push Docker image
+        id: build-image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${IMAGE_TAG} .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${IMAGE_TAG}
+          echo "image-tag=${IMAGE_TAG}" >> $GITHUB_ENV
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     steps:
-    - name: Login to Azure CLI
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure CLI
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Deploy to Azure Container Apps
-      run: |
-        # Copy the existing revision and update the image
-        az containerapp revision copy \
-          --name myFlaskApp \
-          --resource-group myResourceGroup \
-          --cpu 0.25 \
-          --memory 0.5 \
-          --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }}
-    
-        # Update ingress settings separately
-        az containerapp ingress set \
-          --name myFlaskApp \
-          --resource-group myResourceGroup \
-          --type external \
-          --target-port 5000
-          
+      - name: Create or update Azure Container App
+        run: |
+          if ! az containerapp show --name myFlaskApp --resource-group myResourceGroup; then
+            az containerapp create \
+              --name myFlaskApp \
+              --resource-group myResourceGroup \
+              --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }} \
+              --cpu 0.25 \
+              --memory 0.5 \
+              --ingress external \
+              --target-port 5000 \
+              --environment <your-environment-name>  # Replace with your Container App environment
+          else
+            az containerapp update \
+              --name myFlaskApp \
+              --resource-group myResourceGroup \
+              --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }}
+
   get-url:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
-    - name: Get Application URL
-      run: |
-        APP_URL=$(az containerapp show --name myFlaskApp --resource-group myResourceGroup --query properties.configuration.ingress.fqdn -o tsv)
-        echo "Application URL: ${APP_URL}"
+      - name: Get Application URL
+        run: |
+          APP_URL=$(az containerapp show --name myFlaskApp --resource-group myResourceGroup --query properties.configuration.ingress.fqdn -o tsv)
+          echo "Application URL: ${APP_URL}"
