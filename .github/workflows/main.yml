@@ -49,15 +49,21 @@ jobs:
 
     - name: Deploy to Azure Container Apps
       run: |
+        # Copy the existing revision and update the image
         az containerapp revision copy \
           --name myFlaskApp \
           --resource-group myResourceGroup \
           --cpu 0.25 \
           --memory 0.5 \
-          --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }} \
-          --ingress external \
+          --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${{ needs.build.outputs.image-tag }}
+    
+        # Update ingress settings separately
+        az containerapp ingress set \
+          --name myFlaskApp \
+          --resource-group myResourceGroup \
+          --type external \
           --target-port 5000
-
+          
   get-url:
     runs-on: ubuntu-latest
     needs: deploy
