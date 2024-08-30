@@ -48,10 +48,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Azure login using OIDC
-        uses: azure/login@v2
+      - name: Login to Azure CLI
+        uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          creds: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
@@ -61,12 +62,11 @@ jobs:
             --name myFlaskApp \
             --resource-group myResourceGroup \
             --environment myContainerAppEnv \
-            --image ${{ secrets.DOCKERHUB_USERNAME }}/flask-sentiment-app:${{ env.IMAGE_TAG }} \
+            --image ${{ secrets.DOCKERHUB_USERNAME }}/my-flask-app:${IMAGE_TAG} \
             --cpu 0.25 \
             --memory 0.5 \
             --ingress 'external' \
             --target-port 5000
-
       - name: Get Application URL
         run: |
           APP_URL=$(az containerapp show --name myFlaskApp --resource-group myResourceGroup --query properties.configuration.ingress.fqdn -o tsv)
